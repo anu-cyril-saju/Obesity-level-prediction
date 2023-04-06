@@ -1,0 +1,84 @@
+---
+title: "Obeisty Level Prediction"
+output: html_notebook
+---
+
+```{r}
+df = read.csv("preprocessed_data1.csv")
+head(df)
+table(df$NObeyesdad)
+data<-df
+summary(data)
+str(data)
+library(caret)
+set.seed(3033)
+intrain <- createDataPartition(y = data$NObeyesdad, p= 0.7, list = FALSE)
+training <- data[intrain,]
+testing <- data[-intrain,]
+dim(training);dim(testing)
+```
+Naivebayes
+```{r}
+library(e1071)
+library(caret)
+modelnv <- naiveBayes(NObeyesdad ~ ., data = training)
+predictions <- predict(modelnv, newdata = testing)
+confusion = confusionMatrix(predictions, as.factor(testing$NObeyesdad))
+confusion
+```
+
+Decision tree
+```{r}
+library(caret)
+library(rpart.plot)
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(3333)
+dtree_fit_info <- train(NObeyesdad ~., data = training, method = "rpart",parms = list(split = "information"),trControl=trctrl,tuneLength = 10)
+prp(dtree_fit_info$finalModel, box.palette="Reds", tweak=1.2)
+test_pred_info<-predict(dtree_fit_info,newdata = testing)
+confusionMatrix(test_pred_info,as.factor(testing$NObeyesdad))
+```
+Logistic regression
+```{r}
+library(tidyverse)
+library(caret)
+library(nnet)
+# Fit the model
+target <- NObeyesdad ~.
+  #Gender+ Height + Weight
+#FAVC+ family_history_with_overweight +FCVC+ NCP+ CAEC+ SMOKE + CH2O+ SCC +FAF +TUE +CALC +MTRANS
+modellr <- nnet::multinom(target, data = training)
+summary(modellr)
+predicted.classes <- modellr %>% predict(testing)
+head(predicted.classes)
+# Model accuracy
+mean(predicted.classes == testing$NObeyesdad)
+p_hat <- fitted(model)
+#confusion matrix
+confusionMatrix(predicted.classes,as.factor(testing$NObeyesdad))
+```
+Random Forest
+```{r}
+library(randomForest)
+library(ggplot2)
+library(GGally)
+library(dplyr)
+# randomForest method
+set.seed(776)
+modelrf = randomForest(as.factor(NObeyesdad)~., data = training)
+print(modelrf)
+plot(modelrf)
+pred = predict(modelrf, testing)
+cm3 = confusionMatrix(as.factor(testing$NObeyesdad), pred)
+print(cm3)
+```
+
+
+Sample prediction
+```{r}
+newdata1 <- data.frame(Gender=0,Age=21,Height=1.62,Weight = 84.0,family_history_with_overweight=1,FAVC=0,FCVC=3,NCP=3,CAEC=3,SMOKE=0,CH2O=0,SCC=0,FAF=0,TUE=1,CALC=2,MTRANS=4)
+predict(modelrf,newdata1)
+```
+
+
+
